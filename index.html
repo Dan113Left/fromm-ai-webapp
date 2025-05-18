@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fromm AI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #FAF0E6; /* Cream background */
+            color: #333333; /* Dark Gray text */
+            overscroll-behavior-y: none; /* Prevent pull-to-refresh */
+        }
+        .tab-button {
+            transition: background-color 0.3s, color 0.3s;
+        }
+        .tab-button.active {
+            background-color: #A0D2DB; /* Calm Blue */
+            color: white;
+        }
+        .tab-button:not(.active):hover {
+            background-color: #E0F2F7; /* Lighter blue for hover */
+        }
+        .card {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        .btn-primary {
+            background-color: #87CEEB; /* Sky Blue */
+            color: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        .btn-primary:hover {
+            background-color: #76BFDE; /* Darker Sky Blue */
+        }
+        .btn-secondary {
+            background-color: #E0E0E0; /* Light Gray */
+            color: #333333;
+            padding: 10px 15px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: background-color 0.3s;
+        }
+        .btn-secondary:hover {
+            background-color: #D0D0D0;
+        }
+        .concern-tag {
+            cursor: pointer;
+            transition: background-color 0.3s, color 0.3s, border-color 0.3s;
+        }
+        .concern-tag.selected {
+            background-color: #A0D2DB;
+            color: white;
+            border-color: #A0D2DB;
+        }
+        /* Custom scrollbar for webkit browsers */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #A0D2DB;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #87CEEB;
+        }
+        /* Ensure content doesn't hide behind fixed footer */
+        main {
+            padding-bottom: 80px; /* Height of the footer + some margin */
+        }
+    </style>
+</head>
+<body class="antialiased">
+    <div id="app" class="min-h-screen flex flex-col">
+        <header class="p-4 shadow-md bg-white sticky top-0 z-10">
+            <div class="container mx-auto flex justify-between items-center">
+                <h1 class="text-xl font-bold text-[#87CEEB]" id="appName">Fromm AI</h1>
+                <div class="flex items-center space-x-2">
+                    <select id="languageSwitcher" class="p-2 border border-gray-300 rounded-md text-sm">
+                        <option value="en">English</option>
+                        <option value="ru">Русский</option>
+                        <option value="fr">Français</option>
+                        <option value="es">Español</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <main class="flex-grow container mx-auto p-4 overflow-y-auto">
+            <section id="myAccount" class="hidden">
+                <div class="card">
+                    <h2 class="text-2xl font-semibold mb-4" data-translate="myAccountTitle">What's on your mind?</h2>
+                    <p class="text-gray-600 mb-6" data-translate="myAccountDescription">Select the topics that concern you. This will help us personalize your AI mentor.</p>
+                    <div id="concernsList" class="space-y-3 mb-6">
+                        </div>
+                    <button id="saveConcerns" class="btn-primary w-full" data-translate="saveButton">Save Concerns</button>
+                </div>
+                 <div class="card mt-6">
+                    <h3 class="text-lg font-semibold mb-2" data-translate="disclaimerTitle">Important Disclaimer</h3>
+                    <p class="text-sm text-gray-600" data-translate="disclaimerText">
+                        Fromm AI is a digital assistant based on artificial intelligence. AI psychologists are not real people or medical professionals. This application is not intended for diagnosing or treating mental disorders. In case of serious problems or an emergency, please contact a qualified specialist or a helpline.
+                    </p>
+                </div>
+            </section>
+
+            <section id="myAIMentor" class="">
+                <h2 class="text-2xl font-semibold mb-6 text-center" data-translate="aiMentorTitle">Choose Your AI-Mentor</h2>
+                <div id="aiMentorCardContainer" class="relative">
+                    </div>
+                <div id="aiMentorNavigation" class="flex justify-center space-x-4 mt-6">
+                    <button id="prevMentor" class="btn-secondary" data-translate="prevMentorButton">Previous</button>
+                    <button id="nextMentor" class="btn-secondary" data-translate="nextMentorButton">Next</button>
+                </div>
+            </section>
+
+            <section id="progress" class="hidden">
+                 <h2 class="text-2xl font-semibold mb-6 text-center" data-translate="progressTitle">Your Progress</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-2" data-translate="chatsCompleted">Chats Completed</h3>
+                        <p class="text-3xl font-bold text-[#87CEEB]">5 <span class="text-sm font-normal text-gray-500">(mock)</span></p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-2" data-translate="feedbackScore">Average Feedback</h3>
+                        <p class="text-3xl font-bold text-[#87CEEB]">4.5/5 <span class="text-sm font-normal text-gray-500">(mock)</span></p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-2" data-translate="regularityPoints">Regularity Points</h3>
+                        <p class="text-3xl font-bold text-[#87CEEB]">120 <span class="text-sm font-normal text-gray-500">(mock)</span></p>
+                    </div>
+                    <div class="card">
+                        <h3 class="text-lg font-semibold mb-2" data-translate="badgesEarned">Badges Earned</h3>
+                        <div class="flex space-x-2 mt-2">
+                            <span class="text-2xl" title="Новичок">🌟</span>
+                            <span class="text-2xl" title="Постоянный посетитель">📅</span>
+                            <span class="text-2xl" title="Исследователь себя">🧠</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="card mt-6">
+                    <h3 class="text-lg font-semibold mb-2">Progress Bar <span class="text-sm font-normal text-gray-500">(mock)</span></h3>
+                    <div class="w-full bg-gray-200 rounded-full h-4">
+                        <div class="bg-[#A0D2DB] h-4 rounded-full" style="width: 60%;"></div>
+                    </div>
+                    <p class="text-sm text-gray-500 mt-1 text-center">60% to next level</p>
+                </div>
+            </section>
+        </main>
+
+        <footer class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-t-lg">
+            <nav class="container mx-auto flex justify-around p-1">
+                <button data-section="myAIMentor" class="tab-button flex-1 p-3 text-center text-sm rounded-md" data-translate="navMentor">My AI-Mentor</button>
+                <button data-section="myAccount" class="tab-button flex-1 p-3 text-center text-sm rounded-md" data-translate="navAccount">My Account</button>
+                <button data-section="progress" class="tab-button flex-1 p-3 text-center text-sm rounded-md" data-translate="navProgress">Progress</button>
+            </nav>
+        </footer>
+    </div>
+
+    <script>
+        // Initialize Telegram Web App
+        if (window.Telegram && window.Telegram.WebApp) {
+            window.Telegram.WebApp.ready();
+            window.Telegram.WebApp.expand(); // Expand the Web App to full height
+        }
+
+        const translations = {
+            en: {
+                appName: "Fromm AI",
+                navProgress: "Progress",
+                navMentor: "My AI-Mentor",
+                navAccount: "My Account",
+                myAccountTitle: "What's on your mind?",
+                myAccountDescription: "Select the topics that concern you. This will help us personalize your AI mentor.",
+                topicAnxiety: "Anxiety",
+                topicSelfEsteem: "Self-esteem",
+                topicBurnout: "Burnout",
+                topicRelationships: "Relationships",
+                topicStress: "Stress",
+                topicProcrastination: "Procrastination",
+                saveButton: "Save Concerns",
+                aiMentorTitle: "Choose Your AI-Mentor",
+                startChatButton: "Start Chat in Telegram",
+                nextMentorButton: "Next",
+                prevMentorButton: "Previous",
+                originLabel: "Origin",
+                languagesLabel: "Languages",
+                approachLabel: "Therapeutic Approach",
+                progressTitle: "Your Progress",
+                chatsCompleted: "Chats Completed",
+                feedbackScore: "Average Feedback",
+                regularityPoints: "Regularity Points",
+                badgesEarned: "Badges Earned",
+                disclaimerTitle: "Important Disclaimer",
+                disclaimerText: "Fromm AI is a digital assistant based on artificial intelligence. AI psychologists are not real people or medical professionals. This application is not intended for diagnosing or treating mental disorders. In case of serious problems or an emergency, please contact a qualified specialist or a helpline.",
+                originIndia: "India",
+                originFrance: "France",
+                originSpain: "Spain",
+                originGermany: "Germany",
+                approachCBT: "Cognitive Behavioral",
+                approachHumanistic: "Humanistic",
+                approachACT: "ACT (Acceptance and Commitment Therapy)",
+                approachPsychodynamic: "Psychodynamic",
+                anyaDescription: "Focusing on understanding thoughts and behaviors to foster positive change.",
+                leoDescription: "Emphasizing personal growth, self-actualization, and the client's capacity for self-direction.",
+                sofiaDescription: "Helping you accept your thoughts and feelings and commit to actions that enrich your life.",
+                maxDescription: "Exploring unconscious patterns and past experiences to understand present difficulties."
+            },
+            ru: {
+                appName: "Fromm AI",
+                navProgress: "Прогресс",
+                navMentor: "Мой ИИ-Наставник",
+                navAccount: "Мой Аккаунт",
+                myAccountTitle: "Что вас беспокоит?",
+                myAccountDescription: "Выберите темы, которые вас волнуют. Это поможет нам персонализировать вашего ИИ-наставника.",
+                topicAnxiety: "Тревожность",
+                topicSelfEsteem: "Самооценка",
+                topicBurnout: "Выгорание",
+                topicRelationships: "Отношения",
+                topicStress: "Стресс",
+                topicProcrastination: "Прокрастинация",
+                saveButton: "Сохранить темы",
+                aiMentorTitle: "Выберите ИИ-Наставника",
+                startChatButton: "Начать чат в Telegram",
+                nextMentorButton: "Следующий",
+                prevMentorButton: "Предыдущий",
+                originLabel: "Происхождение",
+                languagesLabel: "Языки",
+                approachLabel: "Терапевтический подход",
+                progressTitle: "Ваш Прогресс",
+                chatsCompleted: "Завершено чатов",
+                feedbackScore: "Средний балл отзывов",
+                regularityPoints: "Баллы за регулярность",
+                badgesEarned: "Полученные значки",
+                disclaimerTitle: "Важное уведомление",
+                disclaimerText: "Fromm AI — это цифровой помощник на базе искусственного интеллекта. ИИ-психологи не являются настоящими людьми или медицинскими специалистами. Это приложение не предназначено для диагностики или лечения психических расстройств. В случае серьезных проблем или экстренной ситуации, пожалуйста, обратитесь к квалифицированному специалисту или на горячую линию помощи.",
+                originIndia: "Индия",
+                originFrance: "Франция",
+                originSpain: "Испания",
+                originGermany: "Германия",
+                approachCBT: "Когнитивно-поведенческая",
+                approachHumanistic: "Гуманистическая",
+                approachACT: "ACT (Терапия принятия и ответственности)",
+                approachPsychodynamic: "Психодинамическая",
+                anyaDescription: "Фокусируется на понимании мыслей и поведения для содействия позитивным изменениям.",
+                leoDescription: "Подчеркивает личностный рост, самоактуализацию и способность клиента к самоопределению.",
+                sofiaDescription: "Помогает принять ваши мысли и чувства и посвятить себя действиям, обогащающим вашу жизнь.",
+                maxDescription: "Исследует бессознательные паттерны и прошлый опыт для понимания текущих трудностей."
+            },
+            fr: {
+                appName: "Fromm AI",
+                navProgress: "Progrès",
+                navMentor: "Mon IA-Mentor",
+                navAccount: "Mon Compte",
+                myAccountTitle: "Qu'est-ce qui vous préoccupe ?",
+                myAccountDescription: "Sélectionnez les sujets qui vous préoccupent. Cela nous aidera à personnaliser votre mentor IA.",
+                topicAnxiety: "Anxiété",
+                topicSelfEsteem: "Estime de soi",
+                topicBurnout: "Épuisement professionnel",
+                topicRelationships: "Relations",
+                topicStress: "Stress",
+                topicProcrastination: "Procrastination",
+                saveButton: "Enregistrer les préoccupations",
+                aiMentorTitle: "Choisissez Votre IA-Mentor",
+                startChatButton: "Démarrer le chat dans Telegram",
+                nextMentorButton: "Suivant",
+                prevMentorButton: "Précédent",
+                originLabel: "Origine",
+                languagesLabel: "Langues",
+                approachLabel: "Approche thérapeutique",
+                progressTitle: "Vos Progrès",
+                chatsCompleted: "Discussions terminées",
+                feedbackScore: "Commentaires moyens",
+                regularityPoints: "Points de régularité",
+                badgesEarned: "Badges gagnés",
+                disclaimerTitle: "Avis Important",
+                disclaimerText: "Fromm AI est un assistant numérique basé sur l'intelligence artificielle. Les psychologues IA ne sont pas de vraies personnes ni des professionnels de la santé. Cette application n'est pas destinée à diagnostiquer ou à traiter des troubles mentaux. En cas de problèmes graves ou d'urgence, veuillez contacter un spécialiste qualifié ou une ligne d'assistance.",
+                originIndia: "Inde",
+                originFrance: "France",
+                originSpain: "Espagne",
+                originGermany: "Allemagne",
+                approachCBT: "Cognitivo-comportementale",
+                approachHumanistic: "Humaniste",
+                approachACT: "ACT (Thérapie d'acceptation et d'engagement)",
+                approachPsychodynamic: "Psychodynamique",
+                anyaDescription: "Se concentre sur la compréhension des pensées et des comportements pour favoriser un changement positif.",
+                leoDescription: "Met l'accent sur la croissance personnelle, l'auto-actualisation et la capacité du client à s'autodiriger.",
+                sofiaDescription: "Vous aide à accepter vos pensées et vos sentiments et à vous engager dans des actions qui enrichissent votre vie.",
+                maxDescription: "Explore les schémas inconscients et les expériences passées pour comprendre les difficultés actuelles."
+            },
+            es: {
+                appName: "Fromm AI",
+                navProgress: "Progreso",
+                navMentor: "Mi IA-Mentor",
+                navAccount: "Mi Cuenta",
+                myAccountTitle: "¿Qué te preocupa?",
+                myAccountDescription: "Selecciona los temas que te preocupan. Esto nos ayudará a personalizar tu mentor de IA.",
+                topicAnxiety: "Ansiedad",
+                topicSelfEsteem: "Autoestima",
+                topicBurnout: "Agotamiento",
+                topicRelationships: "Relaciones",
+                topicStress: "Estrés",
+                topicProcrastination: "Procrastinación",
+                saveButton: "Guardar preocupaciones",
+                aiMentorTitle: "Elige Tu IA-Mentor",
+                startChatButton: "Iniciar chat en Telegram",
+                nextMentorButton: "Siguiente",
+                prevMentorButton: "Anterior",
+                originLabel: "Origen",
+                languagesLabel: "Idiomas",
+                approachLabel: "Enfoque terapéutico",
+                progressTitle: "Tu Progreso",
+                chatsCompleted: "Chats completados",
+                feedbackScore: "Comentarios promedio",
+                regularityPoints: "Puntos de regularidad",
+                badgesEarned: "Insignias ganadas",
+                disclaimerTitle: "Aviso Importante",
+                disclaimerText: "Fromm AI es un asistente digital basado en inteligencia artificial. Los psicólogos de IA no son personas reales ni profesionales médicos. Esta aplicación no está destinada a diagnosticar o tratar trastornos mentales. En caso de problemas graves o una emergencia, comuníquese con un especialista calificado o una línea de ayuda.",
+                originIndia: "India",
+                originFrance: "Francia",
+                originSpain: "España",
+                originGermany: "Alemania",
+                approachCBT: "Cognitivo-conductual",
+                approachHumanistic: "Humanista",
+                approachACT: "ACT (Terapia de Aceptación y Compromiso)",
+                approachPsychodynamic: "Psicodinámico",
+                anyaDescription: "Se enfoca en comprender pensamientos y comportamientos para fomentar un cambio positivo.",
+                leoDescription: "Enfatiza el crecimiento personal, la autorrealización y la capacidad del cliente para la autodirección.",
+                sofiaDescription: "Te ayuda a aceptar tus pensamientos y sentimientos y a comprometerte con acciones que enriquecen tu vida.",
+                maxDescription: "Explora patrones inconscientes y experiencias pasadas para comprender las dificultades actuales."
+            }
+        };
+
+        let currentLanguage = 'en';
+        let currentMentorIndex = 0;
+        let userConcerns = [];
+
+        const concerns = [
+            { id: 'anxiety', key: 'topicAnxiety' },
+            { id: 'selfEsteem', key: 'topicSelfEsteem' },
+            { id: 'burnout', key: 'topicBurnout' },
+            { id: 'relationships', key: 'topicRelationships' },
+            { id: 'stress', key: 'topicStress' },
+            { id: 'procrastination', key: 'topicProcrastination' },
+        ];
+
+        const aiPersonalities = [
+          {
+            id: 'anya_sharma',
+            name: 'Dr. Anya Sharma',
+            originKey: 'originIndia',
+            languages: ['English', 'Hindi'],
+            approachKey: 'approachCBT',
+            descriptionKey: 'anyaDescription',
+            telegramUsername: 'AnyaSharmaAIBot_bot', // Example username
+            avatar: 'https://placehold.co/120x120/A0D2DB/333333?text=AS'
+          },
+          {
+            id: 'leo_moreau',
+            name: 'Léo Moreau',
+            originKey: 'originFrance',
+            languages: ['Français', 'English'],
+            approachKey: 'approachHumanistic',
+            descriptionKey: 'leoDescription',
+            telegramUsername: 'LeoMoreauAIBot_bot',
+            avatar: 'https://placehold.co/120x120/87CEEB/FFFFFF?text=LM'
+          },
+          {
+            id: 'sofia_castillo',
+            name: 'Sofía Castillo',
+            originKey: 'originSpain',
+            languages: ['Español', 'English'],
+            approachKey: 'approachACT',
+            descriptionKey: 'sofiaDescription',
+            telegramUsername: 'SofiaCastilloAIBot_bot',
+            avatar: 'https://placehold.co/120x120/DBA0A0/FFFFFF?text=SC'
+          },
+          {
+            id: 'max_schmidt',
+            name: 'Dr. Max Schmidt',
+            originKey: 'originGermany',
+            languages: ['Deutsch', 'English'],
+            approachKey: 'approachPsychodynamic',
+            descriptionKey: 'maxDescription',
+            telegramUsername: 'MaxSchmidtAIBot_bot',
+            avatar: 'https://placehold.co/120x120/D3D3D3/333333?text=MS'
+          }
+        ];
+
+        // --- Localization ---
+        function translateUI() {
+            document.querySelectorAll('[data-translate]').forEach(el => {
+                const key = el.getAttribute('data-translate');
+                if (translations[currentLanguage] && translations[currentLanguage][key]) {
+                    el.innerHTML = translations[currentLanguage][key];
+                }
+            });
+            // Update dynamic content if needed (e.g., AI mentor card, concerns)
+            renderConcernsList();
+            renderAIMentorCard();
+        }
+
+        document.getElementById('languageSwitcher').addEventListener('change', (event) => {
+            currentLanguage = event.target.value;
+            localStorage.setItem('frommAiLang', currentLanguage);
+            translateUI();
+        });
+
+        // --- Navigation ---
+        const sections = ['myAccount', 'myAIMentor', 'progress'];
+        const navButtons = document.querySelectorAll('.tab-button');
+
+        function showSection(sectionId) {
+            sections.forEach(id => {
+                document.getElementById(id).classList.add('hidden');
+            });
+            document.getElementById(sectionId).classList.remove('hidden');
+
+            navButtons.forEach(button => {
+                button.classList.toggle('active', button.dataset.section === sectionId);
+            });
+            localStorage.setItem('frommAiActiveSection', sectionId);
+        }
+
+        navButtons.forEach(button => {
+            button.addEventListener('click', () => {
+                showSection(button.dataset.section);
+            });
+        });
+
+        // --- My Account Section ---
+        const concernsListEl = document.getElementById('concernsList');
+        const saveConcernsButton = document.getElementById('saveConcerns');
+
+        function renderConcernsList() {
+            concernsListEl.innerHTML = ''; // Clear previous items
+            concerns.forEach(concern => {
+                const button = document.createElement('button');
+                button.classList.add('concern-tag', 'w-full', 'text-left', 'p-3', 'border', 'border-gray-300', 'rounded-md', 'hover:bg-gray-100');
+                button.textContent = translations[currentLanguage][concern.key] || concern.key;
+                button.dataset.concernId = concern.id;
+                if (userConcerns.includes(concern.id)) {
+                    button.classList.add('selected');
+                }
+                button.addEventListener('click', () => {
+                    toggleConcern(concern.id);
+                    button.classList.toggle('selected');
+                });
+                concernsListEl.appendChild(button);
+            });
+        }
+
+        function toggleConcern(concernId) {
+            const index = userConcerns.indexOf(concernId);
+            if (index > -1) {
+                userConcerns.splice(index, 1);
+            } else {
+                userConcerns.push(concernId);
+            }
+        }
+
+        saveConcernsButton.addEventListener('click', () => {
+            localStorage.setItem('frommAiUserConcerns', JSON.stringify(userConcerns));
+            // Optionally, provide feedback to the user
+            alert((translations[currentLanguage] && translations[currentLanguage].saveButton ? 'Concerns saved!' : 'Темы сохранены!'));
+            // For Telegram WebApp, use a custom modal or a subtle notification instead of alert if possible
+             if (window.Telegram && window.Telegram.WebApp) {
+                window.Telegram.WebApp.showPopup({
+                    title: currentLanguage === 'ru' ? 'Сохранено' : 'Saved',
+                    message: currentLanguage === 'ru' ? 'Ваши темы были сохранены.' : 'Your concerns have been saved.',
+                    buttons: [{type: 'ok'}]
+                });
+            }
+        });
+
+        // --- My AI-Mentor Section ---
+        const mentorCardContainer = document.getElementById('aiMentorCardContainer');
+        const prevMentorButton = document.getElementById('prevMentor');
+        const nextMentorButton = document.getElementById('nextMentor');
+
+        function renderAIMentorCard() {
+            const mentor = aiPersonalities[currentMentorIndex];
+            if (!mentor) return;
+
+            const lang = currentLanguage; // short alias
+
+            mentorCardContainer.innerHTML = `
+                <div class="card text-center p-6 transform transition-all duration-300 ease-in-out hover:scale-105">
+                    <img src="${mentor.avatar}" alt="${mentor.name}" class="w-24 h-24 rounded-full mx-auto mb-4 border-4 border-[#A0D2DB]">
+                    <h3 class="text-2xl font-bold mb-1">${mentor.name}</h3>
+                    <p class="text-sm text-gray-500 mb-3">
+                        <strong data-translate="originLabel">${translations[lang].originLabel || 'Origin'}:</strong>
+                        <span data-translate="${mentor.originKey}">${translations[lang][mentor.originKey] || mentor.originKey}</span>
+                    </p>
+                    <div class="mb-3">
+                        <strong class="block text-sm font-medium mb-1" data-translate="languagesLabel">${translations[lang].languagesLabel || 'Languages'}:</strong>
+                        <div class="flex flex-wrap justify-center gap-2">
+                            ${mentor.languages.map(l => `<span class="bg-gray-200 text-gray-700 px-2 py-1 text-xs rounded-full">${l}</span>`).join('')}
+                        </div>
+                    </div>
+                    <div class="mb-4">
+                        <strong class="block text-sm font-medium mb-1" data-translate="approachLabel">${translations[lang].approachLabel || 'Therapeutic Approach'}:</strong>
+                        <p class="text-sm text-[#87CEEB] font-semibold" data-translate="${mentor.approachKey}">${translations[lang][mentor.approachKey] || mentor.approachKey}</p>
+                    </div>
+                    <p class="text-sm text-gray-600 mb-6 min-h-[40px]" data-translate="${mentor.descriptionKey}">
+                        ${translations[lang][mentor.descriptionKey] || mentor.descriptionKey}
+                    </p>
+                    <button id="startChat" class="btn-primary w-full" data-translate="startChatButton">
+                        ${translations[lang].startChatButton || 'Start Chat in Telegram'}
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('startChat').addEventListener('click', () => {
+                const concernsQueryParam = userConcerns.length > 0 ? `concerns_${userConcerns.join('_')}` : '';
+                const telegramLink = `https://t.me/${mentor.telegramUsername}?start=${concernsQueryParam}`;
+                if (window.Telegram && window.Telegram.WebApp) {
+                    window.Telegram.WebApp.openTelegramLink(telegramLink);
+                } else {
+                    // Fallback for browsers or if SDK not available
+                    window.open(telegramLink, '_blank');
+                    console.log('Opening Telegram link:', telegramLink);
+                }
+            });
+        }
+
+        prevMentorButton.addEventListener('click', () => {
+            currentMentorIndex = (currentMentorIndex - 1 + aiPersonalities.length) % aiPersonalities.length;
+            renderAIMentorCard();
+        });
+
+        nextMentorButton.addEventListener('click', () => {
+            currentMentorIndex = (currentMentorIndex + 1) % aiPersonalities.length;
+            renderAIMentorCard();
+        });
+
+        // --- Demo Fetch (as requested) ---
+        async function demoFetchToAPI(mentor) {
+            // This is a mock API call for demonstration
+            const mockApiEndpoint = 'https://jsonplaceholder.typicode.com/posts';
+            const telegramUser = (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.initDataUnsafe.user)
+                                 ? window.Telegram.WebApp.initDataUnsafe.user
+                                 : { id: 'testUser123', first_name: 'Demo' };
+
+            console.log("Preparing to send demo API request for mentor:", mentor.name, "and user:", telegramUser.id);
+            console.log("User concerns for prompt:", userConcerns);
+
+            try {
+                const response = await fetch(mockApiEndpoint, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        title: `AI Mentor Request: ${mentor.name}`,
+                        body: `User ID: ${telegramUser.id}, User Name: ${telegramUser.first_name}, Selected Mentor: ${mentor.name}, Approach: ${translations[currentLanguage][mentor.approachKey]}, Concerns: ${userConcerns.join(', ')}`,
+                        userId: telegramUser.id,
+                    }),
+                    headers: {
+                        'Content-type': 'application/json; charset=UTF-8',
+                    },
+                });
+                if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+                const data = await response.json();
+                console.log('Demo API Response:', data);
+                
+                if (window.Telegram && window.Telegram.WebApp) {
+                     window.Telegram.WebApp.showPopup({
+                        title: 'Demo API Call',
+                        message: `Successfully sent mock data for ${mentor.name}. Check console for details.`,
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    alert(`Demo API call for ${mentor.name} successful. Check console for (mock) response.`);
+                }
+
+            } catch (error) {
+                console.error('Demo API fetch error:', error);
+                 if (window.Telegram && window.Telegram.WebApp) {
+                     window.Telegram.WebApp.showPopup({
+                        title: 'Demo API Error',
+                        message: `Failed to send mock data: ${error.message}. Check console.`,
+                        buttons: [{type: 'ok'}]
+                    });
+                } else {
+                    alert('Demo API call failed. Check console.');
+                }
+            }
+        }
+        // Example of how you might call it (e.g., after a mentor is chosen, for logging or analytics)
+        // setTimeout(() => demoFetchToAPI(aiPersonalities[0]), 5000); // Call for first mentor after 5s for demo
+
+        // --- Initial Load ---
+        function initializeApp() {
+            // Load language
+            const savedLang = localStorage.getItem('frommAiLang');
+            if (savedLang && translations[savedLang]) {
+                currentLanguage = savedLang;
+                document.getElementById('languageSwitcher').value = savedLang;
+            }
+
+            // Load user concerns
+            const savedConcerns = localStorage.getItem('frommAiUserConcerns');
+            if (savedConcerns) {
+                userConcerns = JSON.parse(savedConcerns);
+            }
+
+            // Load active section
+            const savedSection = localStorage.getItem('frommAiActiveSection') || 'myAIMentor';
+            showSection(savedSection);
+
+            translateUI(); // This will also render concerns and mentor card
+        }
+
+        // Wait for the DOM to be fully loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
+
+    </script>
+</body>
+</html>
